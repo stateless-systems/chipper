@@ -1,0 +1,8 @@
+ext/*
+!ext/src
+!ext/re2
+!ext/util
+!ext/*.rb
+pkg/*
+.yardoc
+*.gem

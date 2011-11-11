@@ -1,0 +1,37 @@
+= Twitter Text Extraction Utilities
+
+fast screen name, hashtag, url extraction and tokenizer for tweets.
+
+== API
+
+    Chipper
+      #users     => [Array]
+      #hashtags  => [Array]
+      #urls      => [Array]
+      #tokens    => [Array]
+
+      #skip_users
+      #skip_hashtags
+      #skip_tokens
+
+== Usage
+
+    require 'chipper'
+    
+    Chipper.skip_users(%w(youtube msn))
+    Chipper.skip_hashtags(%w(abc24 cnn))
+    Chipper.skip_tokens(%w(story tv why that get from your))
+
+    tweet = "@youtube, why is that stories about @apple on #cnn always get #removed from your website http://youtube.com"
+    Chipper.users(tweet)    #=> ["@apple"]
+    Chipper.hashtags(tweet) #=> ["#removed"]
+    Chipper.urls(tweet)     #=> ["http://youtube.com"]
+    Chipper.tokens(tweet)   #=> ["about", "always", "website"]
+
+== Warning
+
+the api is *not* thread safe, so use it carefully.
+
+== License
+
+{Creative Commons Attribution - CC BY}[http://creativecommons.org/licenses/by/3.0]
