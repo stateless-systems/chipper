@@ -3,10 +3,15 @@
 require 'mkmf'
 require 'fileutils'
 
-Config::CONFIG['CC']  = 'g++'
-Config::CONFIG['CPP'] = 'g++'
+EXTCONFIG        = Object.const_get(defined?(RbConfig) ? :RbConfig : :Config)::CONFIG
+EXTCONFIG['CC']  = 'g++'
+EXTCONFIG['CPP'] = 'g++'
 
-$CFLAGS  = '-fPIC -Ofast -pthread -Wno-sign-compare '
+version  = %x{g++ --version | head -n1}.strip.sub(%r{^.* ([\d\.]+)$}, '\1')
+maj, min = version.split(/\./).values_at(0, 1).map(&:to_i)
+
+$CFLAGS  = '-pthread -Wno-sign-compare '
+$CFLAGS += maj > 3 && min > 5 ? '-Ofast ' : '-O3 '
 $CFLAGS += '-I/usr/include -I/opt/local/include -I/usr/local/include'
 
 def apt_install_hint pkg
