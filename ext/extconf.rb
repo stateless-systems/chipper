@@ -23,6 +23,7 @@ def library_installed? name, hint
       On debian systems, it can be installed as,
 
       #{hint}
+
     ERROR
     false
   end
