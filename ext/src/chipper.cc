@@ -97,40 +97,43 @@ VALUE urls(VALUE self, VALUE text) {
 }
 
 VALUE tokens(VALUE self, VALUE text) {
+    static const char *phrase_delim = "\r\n:,;'\"{}()[]./\\%*|&!~`$+=<>?";
+    static const char *word_delim   = "\t- ";
+
     if (NIL_P(text) || TYPE(text) != T_STRING)
         rb_raise(rb_eArgError, "Chipper#tokens requires tweet text");
 
-    VALUE result = rb_ary_new();
+    VALUE segment, result = rb_ary_new();
     rb_encoding *encoding = rb_enc_get(text);
-    char *token, *str, *ptr = (char*)malloc(RSTRING_LEN(text) + 1);
+
+    char *token, *ptr, *buffer = (char*)malloc(RSTRING_LEN(text) + 1), *phrase_ptr, *word_ptr;
+
+    ptr = buffer;
     bzero(ptr, RSTRING_LEN(text) + 1);
     memcpy(ptr, RSTRING_PTR(text), RSTRING_LEN(text));
 
-    str = ptr;
-    if (StopWordRE) {
-        while ((token = strtok(str, " \t\r\n:,;'\"{}()[]./\\*|&!~`$+=<>?"))) {
-            str = NULL;
+    while ((token = strtok_r(ptr, phrase_delim, &phrase_ptr))) {
+        ptr     = token;
+        segment = rb_ary_new();
+        while ((token = strtok_r(ptr, word_delim, &word_ptr))) {
+            ptr = NULL;
             if (strlen(token) < MIN_WORD_SIZE || *token == '@' || *token == '#') continue;
-            if (RE2::FullMatch(token, *StopWordRE)) continue;
+            if (StopWordRE) {
+                if (RE2::FullMatch(token, *StopWordRE)) continue;
 
-            const sb_symbol *sbstem = sb_stemmer_stem(ENStemmer, (sb_symbol *)token, strlen(token));
-            uint32_t sbstem_len     = sb_stemmer_length(ENStemmer);
+                const sb_symbol *sbstem = sb_stemmer_stem(ENStemmer, (sb_symbol *)token, strlen(token));
+                uint32_t sbstem_len     = sb_stemmer_length(ENStemmer);
 
-            string stem((char*)sbstem, sbstem_len);
-            if (RE2::FullMatch(stem,  *StopWordRE)) continue;
-
-            rb_ary_push(result,  rb_enc_str_new(token, strlen(token), encoding));
+                string stem((char*)sbstem, sbstem_len);
+                if (RE2::FullMatch(stem,  *StopWordRE)) continue;
+            }
+            rb_ary_push(segment, rb_enc_str_new(token, strlen(token), encoding));
         }
-    }
-    else {
-        while ((token = strtok(str, " \t\r\n:,;'\"{}()[]./\\*|&!~`$+=<>?"))) {
-            str = NULL;
-            if (strlen(token) < MIN_WORD_SIZE || *token == '@' || *token == '#') continue;
-            rb_ary_push(result,  rb_enc_str_new(token, strlen(token), encoding));
-        }
+        if (RARRAY_LEN(segment) > 0)
+            rb_ary_push(result, segment);
     }
 
-    free(ptr);
+    free(buffer);
     return result;
 }
 
