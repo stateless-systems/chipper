@@ -103,7 +103,7 @@ VALUE tokens(VALUE self, VALUE text) {
     VALUE result = rb_ary_new();
     rb_encoding *encoding = rb_enc_get(text);
     char *token, *str, *ptr = (char*)malloc(RSTRING_LEN(text) + 1);
-    memset(ptr, 0, RSTRING_LEN(text));
+    bzero(ptr, RSTRING_LEN(text) + 1);
     memcpy(ptr, RSTRING_PTR(text), RSTRING_LEN(text));
 
     str = ptr;
