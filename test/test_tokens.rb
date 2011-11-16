@@ -22,8 +22,14 @@ describe 'Chipper tokens' do
 
   it 'should skip numbers dates and times' do
     expected = [["flubble","bubble"],["champion"]]
-    Chipper.skip_token_pattern %q{^(?:[\d\-]+)(?:am|pm|th|st)?$}
+    Chipper.skip_token_pattern %q{^(?:[\d\-]+)(?:am|pm|th|st|rd)?$}
     Chipper.tokens("flubble bubble I or 123454 123-123-1111 19 on te champion 19th at 4am or 12pm").must_equal expected
+  end
+
+  it 'should skip random other chars dates and times' do
+    expected = [["flubble","bubble"],["champion","winter"],["incredible"]]
+    Chipper.skip_token_pattern %q{^(?:[\d\-]+)(?:am|pm|th|st|rd)?$}
+    Chipper.tokens("flubble_bubble ^o^ champion_winter oh_____ _______ ^incredible ").must_equal expected
   end
 
   it 'should be lowercase' do
