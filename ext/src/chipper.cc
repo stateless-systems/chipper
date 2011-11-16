@@ -123,6 +123,12 @@ VALUE tokens(VALUE self, VALUE text) {
     bzero(ptr, RSTRING_LEN(text) + 1);
     memcpy(ptr, RSTRING_PTR(text), RSTRING_LEN(text));
 
+    int i=0;
+    while (ptr[i]) {
+      ptr[i]=tolower(ptr[i]);
+      i++;
+    }
+
     // blank out urls
     char *ptr1, *ptr2 = ptr;
     while ((ptr1 = STRSTR(ptr2, "http://"))) {

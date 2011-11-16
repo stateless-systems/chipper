@@ -53,7 +53,7 @@ describe 'Chipper tokens' do
 
   describe 'segment across short, stop and non-words' do
     before do
-      @expected = [%w(Flopper Bopper), %w(Dopper)]
+      @expected = [%w(flopper bopper), %w(dopper)]
       Chipper.skip_tokens(%w(four five six stopper))
     end
 
