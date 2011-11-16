@@ -10,12 +10,12 @@ describe 'Chipper tokens' do
   end
 
   it 'should extract tokens' do
-    expect = [%w(why that stories abt always get from http), %w(www1), %w(youtube), %w(com), %w(videos)]
+    expect = [%w(why that stories abt always get from)]
     Chipper.tokens(@tweet).must_equal expect
   end
 
   it 'should skip tokens' do
-    expect = [%w(why that abt get http), %w(www1), %w(youtube), %w(com)]
+    expect = [%w(why that abt get)]
     Chipper.skip_tokens(%w(story always from video))
     Chipper.tokens(@tweet).must_equal expect
   end

@@ -1,12 +1,18 @@
-#include <ruby/ruby.h>
-#include <ruby/io.h>
-#include <cstring>
-#include <cstdlib>
+#include <stdlib.h>
 #include <iostream>
 #include <vector>
 #include "re2/re2.h"
 #include "re2/stringpiece.h"
 #include "libstemmer.h"
+
+#if __GNUC__
+#define STRSTR strcasestr
+#else
+#define STRSTR strstr
+#endif
+
+#include <ruby/ruby.h>
+#include <ruby/io.h>
 
 #define TO_S(v)       rb_funcall(v, rb_intern("to_s"), 0)
 #define CSTRING(v)    RSTRING_PTR(TO_S(v))
@@ -81,15 +87,20 @@ VALUE urls(VALUE self, VALUE text) {
     if (NIL_P(text) || TYPE(text) != T_STRING)
         rb_raise(rb_eArgError, "Chipper#urls requires tweet text");
 
-    int size;
-    VALUE urls = rb_ary_new();
+    VALUE urls            = rb_ary_new();
     rb_encoding *encoding = rb_enc_get(text);
+
+    int size;
     string match;
     StringPiece input;
     input.set(RSTRING_PTR(text), RSTRING_LEN(text));
+
     while (RE2::FindAndConsume(&input, *UrlRE, &match)) {
-        // we don't want urls terminating with !, it could just be an exclamation mark.
-        size = match.data()[match.size() - 1] == '!' ? match.size() - 1 : match.size();
+        // TODO false positives ?
+        // we don't want urls terminating with ! or .
+        size = match.size();
+        if (match.data()[size - 1] == '!') size--;
+        if (match.data()[size - 1] == '.') size--;
         rb_ary_push(urls, rb_enc_str_new(match.data(), size, encoding));
     }
 
@@ -111,6 +122,21 @@ VALUE tokens(VALUE self, VALUE text) {
     ptr = buffer;
     bzero(ptr, RSTRING_LEN(text) + 1);
     memcpy(ptr, RSTRING_PTR(text), RSTRING_LEN(text));
+
+    // blank out urls
+    char *ptr1, *ptr2 = ptr;
+    while ((ptr1 = STRSTR(ptr2, "http://"))) {
+        ptr2 = strtok_r(ptr1, "\r\n\t ", &phrase_ptr);
+        ptr2 = phrase_ptr;
+        memset(ptr1, ' ', ptr2 - ptr1);
+    }
+
+    ptr2 = ptr;
+    while ((ptr1 = STRSTR(ptr2, "https://"))) {
+        ptr2 = strtok_r(ptr1, "\r\n\t ", &phrase_ptr);
+        ptr2 = phrase_ptr;
+        memset(ptr1, ' ', ptr2 - ptr1);
+    }
 
     while ((token = strtok_r(ptr, phrase_delim, &phrase_ptr))) {
         ptr     = token;
