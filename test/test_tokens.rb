@@ -19,4 +19,26 @@ describe 'Chipper tokens' do
     Chipper.skip_tokens(%w(story always from video))
     Chipper.tokens(@tweet).must_equal expect
   end
+
+  it 'should partition correctly on short word' do
+    text =  "Flopper Bopper at Dopper"
+    expect = [["Flopper","Bopper"],["Dopper"]]
+    Chipper.skip_tokens(%w(four five six stopper))
+    Chipper.tokens(text).must_equal expect
+  end
+
+  it 'should partition correctly on stop word' do
+    text =  "Flopper Bopper STOPPER Dopper"
+    expect = [["Flopper","Bopper"],["Dopper"]]
+    Chipper.skip_tokens(%w(four five six stopper))
+    Chipper.tokens(text).must_equal expect
+  end
+
+  it 'should partition correctly on non-word' do
+    text =  "Flopper Bopper. Dopper"
+    expect = [["Flopper","Bopper"],["Dopper"]]
+    Chipper.skip_tokens(%w(four five six stopper))
+    Chipper.tokens(text).must_equal expect
+  end
+
 end
