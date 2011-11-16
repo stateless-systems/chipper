@@ -30,6 +30,12 @@ describe 'Chipper tokens' do
     Chipper.tokens("FLUBBLE BUBBLE").must_equal expected
   end
 
+  it 'stop words should not be case sensitive' do
+    expected = [["pancakes"]]
+    Chipper.skip_tokens(%w(christmas))
+    Chipper.tokens("pancakes in Christmas").must_equal expected
+  end
+
   it 'should filter stemmed words that are too short' do
     expected = [["flubble","bubble"]]
     Chipper.tokens("I am going to doing, being flubble bubble its").must_equal expected
