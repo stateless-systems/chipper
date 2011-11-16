@@ -30,6 +30,16 @@ describe 'Chipper tokens' do
     Chipper.tokens("FLUBBLE BUBBLE").must_equal expected
   end
 
+  it 'should filter stemmed words that are too short' do
+    expected = [["flubble","bubble"]]
+    Chipper.tokens("I am going to doing, being flubble bubble its").must_equal expected
+  end
+
+  it 'should remove abbreviations with single quotes' do # eg don't, won't aren't etc.  Quick 'cheats' way to do this is just sub out all single quotes with nothing.
+    expected = [["flubble","bubble","dont"]]
+    Chipper.tokens("flubble bubble don't do it").must_equal expected
+  end
+
   it 'should segment across urls' do
     expected = [%w(hello world), %w(this), %w(might work)]
     Chipper.tokens('hello world, this http://www.example.com/1 might work').must_equal expected
