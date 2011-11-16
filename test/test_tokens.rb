@@ -22,7 +22,8 @@ describe 'Chipper tokens' do
 
   it 'should skip numbers dates and times' do
     expected = [["flubble","bubble"],["champion"]]
-    Chipper.tokens("flubble bubble I or 123454 123-123-1111 5 19 on te champion 19th at 4am or 12pm ").must_equal expected
+    Chipper.skip_token_pattern %q{^(?:[\d\-]+)(?:am|pm|th|st)?$}
+    Chipper.tokens("flubble bubble I or 123454 123-123-1111 19 on te champion 19th at 4am or 12pm").must_equal expected
   end
 
   it 'should be lowercase' do
@@ -41,7 +42,8 @@ describe 'Chipper tokens' do
     Chipper.tokens("I am going to doing, being flubble bubble its").must_equal expected
   end
 
-  it 'should remove abbreviations with single quotes' do # eg don't, won't aren't etc.  Quick 'cheats' way to do this is just sub out all single quotes with nothing.
+  # eg don't, won't aren't etc.  Quick 'cheats' way to do this is just sub out all single quotes with nothing.
+  it 'should remove abbreviations with single quotes' do
     expected = [["flubble","bubble","dont"]]
     Chipper.tokens("flubble bubble don't do it").must_equal expected
   end

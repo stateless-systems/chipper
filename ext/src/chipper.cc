@@ -27,7 +27,8 @@ RE2 *HashTagRE;
 RE2 *UrlRE;
 RE2 *UserStopRE;
 RE2 *HashTagStopRE;
-RE2 *StopWordRE;
+RE2 *SkipTokenRE;
+RE2 *SkipTokenPatternRE;
 
 RE2::Options DefaultMatchOptions;
 VALUE id_users, id_hashtags, id_urls;
@@ -112,22 +113,23 @@ VALUE tokens(VALUE self, VALUE text) {
     static const char *word_delim   = "\t- ";
 
     if (NIL_P(text) || TYPE(text) != T_STRING)
-        rb_raise(rb_eArgError, "Chipper#tokens requires tweet text");
+        rb_raise(rb_eArgError, "requires tweet text");
 
     VALUE segment, result = rb_ary_new();
     rb_encoding *encoding = rb_enc_get(text);
 
-    char *token, *ptr, *buffer = (char*)malloc(RSTRING_LEN(text) + 1), *phrase_ptr, *word_ptr;
+    char *token, *ptr, *buffer = (char*)calloc(RSTRING_LEN(text) + 1, 1), *phrase_ptr, *word_ptr;
+
+    if (!buffer)
+        rb_raise(rb_eNoMemError, "ran out of memory copying tweet text");
 
     ptr = buffer;
     bzero(ptr, RSTRING_LEN(text) + 1);
     memcpy(ptr, RSTRING_PTR(text), RSTRING_LEN(text));
 
-    int i=0;
-    while (ptr[i]) {
-      ptr[i]=tolower(ptr[i]);
-      i++;
-    }
+    // downcase input
+    while (*ptr) *ptr++ = tolower(*ptr);
+    ptr = buffer;
 
     // blank out urls
     char *ptr1, *ptr2 = ptr;
@@ -144,11 +146,21 @@ VALUE tokens(VALUE self, VALUE text) {
         memset(ptr1, '\n', ptr2 - ptr1);
     }
 
+    // blank out single quotes
+    ptr2 = ptr;
+    int size = strlen(ptr);
+    while ((ptr1 = strchr(ptr2, 39))) {
+        memcpy(ptr1, ptr1 + 1, size - (ptr1 - ptr) - 1);
+        ptr[--size] = 0;
+    }
+
     segment = rb_ary_new();
     while ((token = strtok_r(ptr, phrase_delim, &phrase_ptr))) {
         ptr = token;
+
         while ((token = strtok_r(ptr, word_delim, &word_ptr))) {
             ptr = NULL;
+
             if (strlen(token) < MIN_WORD_SIZE || *token == '@' || *token == '#') {
                 if (RARRAY_LEN(segment) > 0) {
                     rb_ary_push(result, segment);
@@ -156,8 +168,20 @@ VALUE tokens(VALUE self, VALUE text) {
                 }
                 continue;
             }
-            if (StopWordRE) {
-                if (RE2::FullMatch(token, *StopWordRE)) {
+
+            const sb_symbol *sbstem = sb_stemmer_stem(ENStemmer, (sb_symbol *)token, strlen(token));
+            uint32_t sbstem_len     = sb_stemmer_length(ENStemmer);
+
+            if (sbstem_len < MIN_WORD_SIZE) {
+                if (RARRAY_LEN(segment) > 0) {
+                    rb_ary_push(result, segment);
+                    segment = rb_ary_new();
+                }
+                continue;
+            }
+
+            if (SkipTokenRE) {
+                if (RE2::FullMatch(token, *SkipTokenRE)) {
                     if (RARRAY_LEN(segment) > 0) {
                         rb_ary_push(result, segment);
                         segment = rb_ary_new();
@@ -165,11 +189,8 @@ VALUE tokens(VALUE self, VALUE text) {
                     continue;
                 }
 
-                const sb_symbol *sbstem = sb_stemmer_stem(ENStemmer, (sb_symbol *)token, strlen(token));
-                uint32_t sbstem_len     = sb_stemmer_length(ENStemmer);
-
                 string stem((char*)sbstem, sbstem_len);
-                if (RE2::FullMatch(stem,  *StopWordRE)) {
+                if (RE2::FullMatch(stem,  *SkipTokenRE)) {
                     if (RARRAY_LEN(segment) > 0) {
                         rb_ary_push(result, segment);
                         segment = rb_ary_new();
@@ -177,6 +198,15 @@ VALUE tokens(VALUE self, VALUE text) {
                     continue;
                 }
             }
+
+            if (SkipTokenPatternRE && RE2::FullMatch(token, *SkipTokenPatternRE)) {
+                if (RARRAY_LEN(segment) > 0) {
+                    rb_ary_push(result, segment);
+                    segment = rb_ary_new();
+                }
+                continue;
+            }
+
             rb_ary_push(segment, rb_enc_str_new(token, strlen(token), encoding));
         }
 
@@ -199,9 +229,12 @@ VALUE skip_users(VALUE self, VALUE list) {
     if (NIL_P(list)) return Qtrue;
 
     if (TYPE(list) != T_ARRAY)
-        rb_raise(rb_eArgError, "Chipper#skip_users requires a list");
+        rb_raise(rb_eArgError, "requires a list of screen names minus @");
 
     UserStopRE = new RE2("@" + build_alternating_expr(list), DefaultMatchOptions);
+    if (!UserStopRE->ok())
+        rb_raise(rb_eArgError, "%s", UserStopRE->error().c_str());
+
     return Qtrue;
 }
 
@@ -213,21 +246,24 @@ VALUE skip_hashtags(VALUE self, VALUE list) {
     if (NIL_P(list)) return Qtrue;
 
     if (TYPE(list) != T_ARRAY)
-        rb_raise(rb_eArgError, "Chipper#skip_hashtags requires a list");
+        rb_raise(rb_eArgError, "requires a list of hashtags minus #");
 
     HashTagStopRE = new RE2("#" + build_alternating_expr(list), DefaultMatchOptions);
+    if (!HashTagStopRE->ok())
+        rb_raise(rb_eArgError, "%s", HashTagStopRE->error().c_str());
+
     return Qtrue;
 }
 
 VALUE skip_tokens(VALUE self, VALUE list) {
-    if (StopWordRE)
-        delete StopWordRE;
-    StopWordRE = NULL;
+    if (SkipTokenRE)
+        delete SkipTokenRE;
+    SkipTokenRE = NULL;
 
     if (NIL_P(list)) return Qtrue;
 
     if (TYPE(list) != T_ARRAY)
-        rb_raise(rb_eArgError, "Chipper#skip_tokens requires a list");
+        rb_raise(rb_eArgError, "requires a list of words");
 
     // add stems as well
     int i, max = RARRAY_LEN(list);
@@ -241,21 +277,42 @@ VALUE skip_tokens(VALUE self, VALUE list) {
 
     // too bad, no uniq c api
     rb_funcall(list, rb_intern("uniq!"), 0);
-    StopWordRE = new RE2("^" + build_alternating_expr(list) + "$", DefaultMatchOptions);
+    SkipTokenRE = new RE2("^" + build_alternating_expr(list) + "$", DefaultMatchOptions);
+    if (!SkipTokenRE->ok())
+        rb_raise(rb_eArgError, "%s", SkipTokenRE->error().c_str());
+
     return Qtrue;
 }
 
+VALUE skip_token_pattern(VALUE self, VALUE re) {
+    if (SkipTokenPatternRE)
+        delete SkipTokenPatternRE;
+
+    SkipTokenPatternRE = NULL;
+
+    if (NIL_P(re)) return Qtrue;
+
+    SkipTokenPatternRE = new RE2(CSTRING(re), DefaultMatchOptions);
+    if (!SkipTokenPatternRE->ok())
+        rb_raise(rb_eArgError, "%s", SkipTokenPatternRE->error().c_str());
+
+    return Qtrue;
+}
+
+
 extern "C" {
     void Init_chipper(void) {
-        UserRE        = new RE2("(?:^|[^[:alnum:]])+([@＠][[:alnum:]_\\-]+)");
-        HashTagRE     = new RE2("(?:^|[^[:alnum:]])+(#[[:alnum:]}_]+)");
-        UrlRE         = new RE2("(https?://[[:alnum:]\\-_\\.:@]+\\.[[:alnum:]\\-_]+/?[^\\s\\r\\n]*)");
-        UserStopRE    = NULL;
-        HashTagStopRE = NULL;
-        StopWordRE    = NULL;
-        ENStemmer     = sb_stemmer_new("english", "UTF_8");
+        ENStemmer          = sb_stemmer_new("english", "UTF_8");
+        UserRE             = new RE2("(?:^|[^[:alnum:]])+([@＠][[:alnum:]_\\-]+)");
+        HashTagRE          = new RE2("(?:^|[^[:alnum:]])+(#[[:alnum:]}_]+)");
+        UrlRE              = new RE2("(https?://[[:alnum:]\\-_\\.:@]+\\.[[:alnum:]\\-_]+/?[^\\s\\r\\n]*)");
+        UserStopRE         = NULL;
+        HashTagStopRE      = NULL;
+        SkipTokenRE        = NULL;
+        SkipTokenPatternRE = NULL;
 
         DefaultMatchOptions.set_case_sensitive(false);
+        DefaultMatchOptions.set_log_errors(false);
 
         id_users    = ID2SYM(rb_intern("users"));
         id_hashtags = ID2SYM(rb_intern("hashtags"));
@@ -266,12 +323,13 @@ extern "C" {
         rb_gc_mark(id_urls);
 
         VALUE mTE = rb_define_module("Chipper");
-        rb_define_module_function(mTE, "users",         RUBY_METHOD_FUNC(users), 1);
-        rb_define_module_function(mTE, "hashtags",      RUBY_METHOD_FUNC(hashtags), 1);
-        rb_define_module_function(mTE, "urls",          RUBY_METHOD_FUNC(urls), 1);
-        rb_define_module_function(mTE, "tokens",        RUBY_METHOD_FUNC(tokens), 1);
-        rb_define_module_function(mTE, "skip_users",    RUBY_METHOD_FUNC(skip_users), 1);
-        rb_define_module_function(mTE, "skip_hashtags", RUBY_METHOD_FUNC(skip_hashtags), 1);
-        rb_define_module_function(mTE, "skip_tokens",   RUBY_METHOD_FUNC(skip_tokens), 1);
+        rb_define_module_function(mTE, "users",              RUBY_METHOD_FUNC(users), 1);
+        rb_define_module_function(mTE, "hashtags",           RUBY_METHOD_FUNC(hashtags), 1);
+        rb_define_module_function(mTE, "urls",               RUBY_METHOD_FUNC(urls), 1);
+        rb_define_module_function(mTE, "tokens",             RUBY_METHOD_FUNC(tokens), 1);
+        rb_define_module_function(mTE, "skip_users",         RUBY_METHOD_FUNC(skip_users), 1);
+        rb_define_module_function(mTE, "skip_hashtags",      RUBY_METHOD_FUNC(skip_hashtags), 1);
+        rb_define_module_function(mTE, "skip_tokens",        RUBY_METHOD_FUNC(skip_tokens), 1);
+        rb_define_module_function(mTE, "skip_token_pattern", RUBY_METHOD_FUNC(skip_token_pattern), 1);
     }
 }
