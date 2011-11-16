@@ -128,36 +128,57 @@ VALUE tokens(VALUE self, VALUE text) {
     while ((ptr1 = STRSTR(ptr2, "http://"))) {
         ptr2 = strtok_r(ptr1, "\r\n\t ", &phrase_ptr);
         ptr2 = phrase_ptr;
-        memset(ptr1, ' ', ptr2 - ptr1);
+        memset(ptr1, '\n', ptr2 - ptr1);
     }
 
     ptr2 = ptr;
     while ((ptr1 = STRSTR(ptr2, "https://"))) {
         ptr2 = strtok_r(ptr1, "\r\n\t ", &phrase_ptr);
         ptr2 = phrase_ptr;
-        memset(ptr1, ' ', ptr2 - ptr1);
+        memset(ptr1, '\n', ptr2 - ptr1);
     }
 
+    segment = rb_ary_new();
     while ((token = strtok_r(ptr, phrase_delim, &phrase_ptr))) {
-        ptr     = token;
-        segment = rb_ary_new();
+        ptr = token;
         while ((token = strtok_r(ptr, word_delim, &word_ptr))) {
             ptr = NULL;
-            if (strlen(token) < MIN_WORD_SIZE || *token == '@' || *token == '#') continue;
+            if (strlen(token) < MIN_WORD_SIZE || *token == '@' || *token == '#') {
+                if (RARRAY_LEN(segment) > 0) {
+                    rb_ary_push(result, segment);
+                    segment = rb_ary_new();
+                }
+                continue;
+            }
             if (StopWordRE) {
-                if (RE2::FullMatch(token, *StopWordRE)) continue;
+                if (RE2::FullMatch(token, *StopWordRE)) {
+                    if (RARRAY_LEN(segment) > 0) {
+                        rb_ary_push(result, segment);
+                        segment = rb_ary_new();
+                    }
+                    continue;
+                }
 
                 const sb_symbol *sbstem = sb_stemmer_stem(ENStemmer, (sb_symbol *)token, strlen(token));
                 uint32_t sbstem_len     = sb_stemmer_length(ENStemmer);
 
                 string stem((char*)sbstem, sbstem_len);
-                if (RE2::FullMatch(stem,  *StopWordRE)) continue;
+                if (RE2::FullMatch(stem,  *StopWordRE)) {
+                    if (RARRAY_LEN(segment) > 0) {
+                        rb_ary_push(result, segment);
+                        segment = rb_ary_new();
+                    }
+                    continue;
+                }
             }
             rb_ary_push(segment, rb_enc_str_new(token, strlen(token), encoding));
         }
+
         ptr = NULL;
-        if (RARRAY_LEN(segment) > 0)
+        if (RARRAY_LEN(segment) > 0) {
             rb_ary_push(result, segment);
+            segment = rb_ary_new();
+        }
     }
 
     free(buffer);
