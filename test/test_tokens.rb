@@ -20,6 +20,16 @@ describe 'Chipper tokens' do
     Chipper.tokens(@tweet).must_equal expected
   end
 
+  it 'should skip numbers dates and times' do
+    expected = [["flubble","bubble"],["champion"]]
+    Chipper.tokens("flubble bubble I or 123454 123-123-1111 5 19 on te champion 19th at 4am or 12pm ").must_equal expected
+  end
+
+  it 'should be lowercase' do
+    expected = [["flubble","bubble"]]
+    Chipper.tokens("FLUBBLE BUBBLE").must_equal expected
+  end
+
   it 'should segment across urls' do
     expected = [%w(hello world), %w(this), %w(might work)]
     Chipper.tokens('hello world, this http://www.example.com/1 might work').must_equal expected
