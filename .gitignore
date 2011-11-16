@@ -1,3 +1,4 @@
+test?.rb
 ext/*
 !ext/src
 !ext/re2

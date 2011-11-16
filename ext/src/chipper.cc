@@ -129,6 +129,7 @@ VALUE tokens(VALUE self, VALUE text) {
             }
             rb_ary_push(segment, rb_enc_str_new(token, strlen(token), encoding));
         }
+        ptr = NULL;
         if (RARRAY_LEN(segment) > 0)
             rb_ary_push(result, segment);
     }
