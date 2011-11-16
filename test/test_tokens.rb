@@ -87,5 +87,10 @@ describe 'Chipper tokens' do
       text = "hello world, ain\u2019t this \uff20cool huh\u201d"
       Chipper.tokens(text).must_equal [["hello", "world"], ["aint", "this"], ["huh"]]
     end
+
+    it 'should kill tokens that are part, or all unicode' do
+      text = "hello world, \u2020\uff26\u201f \u2021\uff36\u210fcool"
+      Chipper.tokens(text).must_equal [["hello", "world"]]
+    end
   end
 end
