@@ -46,6 +46,28 @@ string build_alternating_expr(VALUE list) {
     return expr;
 }
 
+void replace(char *string, const char *pattern, int c) {
+    int width = strlen(pattern);
+    char *ptr1, *ptr2 = string;
+
+    while ((ptr1 = strstr(ptr2, pattern))) {
+        memset(ptr1, c, width);
+        ptr2 = ptr1 + width;
+    }
+}
+
+void remove(char *string, const char *pattern) {
+    int size = strlen(string), width = strlen(pattern);
+    char *ptr1, *ptr2 = string;
+
+    while ((ptr1 = strstr(ptr2, pattern))) {
+        memcpy(ptr1, ptr1 + width, size - (ptr1 - string) - width);
+        size        -= width;
+        string[size] = 0;
+    }
+}
+
+
 // API
 
 VALUE users(VALUE self, VALUE text) {
@@ -146,13 +168,56 @@ VALUE tokens(VALUE self, VALUE text) {
         memset(ptr1, '\n', ptr2 - ptr1);
     }
 
-    // blank out single quotes
-    ptr2 = ptr;
-    int size = strlen(ptr);
-    while ((ptr1 = strchr(ptr2, 39))) {
-        memcpy(ptr1, ptr1 + 1, size - (ptr1 - ptr) - 1);
-        ptr[--size] = 0;
-    }
+    // remove blank out single quotes
+    remove(ptr, "'");
+    remove(ptr, "\u2019");
+
+    // segment at unicode quotes
+    replace(ptr, "\u2018", '\t');
+    replace(ptr, "\u201c", '\t');
+    replace(ptr, "\u201d", '\t');
+
+    // fullwidth AT => @
+    replace(ptr, "\uff20", '@');
+
+    // unicode spaces
+    replace(ptr, "\u2000 ", ' ');
+    replace(ptr, "\u2001 ", ' ');
+    replace(ptr, "\u2002 ", ' ');
+    replace(ptr, "\u2003 ", ' ');
+    replace(ptr, "\u2004 ", ' ');
+    replace(ptr, "\u2005 ", ' ');
+    replace(ptr, "\u2006 ", ' ');
+    replace(ptr, "\u2007 ", ' ');
+    replace(ptr, "\u2008 ", ' ');
+    replace(ptr, "\u2009 ", ' ');
+    replace(ptr, "\u200A ", ' ');
+    replace(ptr, "\u200B ", ' ');
+    replace(ptr, "\u202F ", ' ');
+    replace(ptr, "\u3000 ", ' ');
+
+    // unicode dashes
+    replace(ptr, "\u058A ", '-');
+    replace(ptr, "\u1806 ", '-');
+    replace(ptr, "\u2010 ", '-');
+    replace(ptr, "\u2011 ", '-');
+    replace(ptr, "\u2012 ", '-');
+    replace(ptr, "\u2013 ", '-');
+    replace(ptr, "\u2014 ", '-');
+    replace(ptr, "\u2015 ", '-');
+    replace(ptr, "\u207B ", '-');
+    replace(ptr, "\u208B ", '-');
+    replace(ptr, "\u2212 ", '-');
+    replace(ptr, "\u301C ", '-');
+    replace(ptr, "\u3030 ", '-');
+
+    // corner brackets
+    replace(ptr, "\u300C", '<');
+    replace(ptr, "\u300E", '<');
+    replace(ptr, "\u301D", '<');
+    replace(ptr, "\u300D", '>');
+    replace(ptr, "\u300F", '>');
+    replace(ptr, "\u301F", '>');
 
     segment = rb_ary_new();
     while ((token = strtok_r(ptr, phrase_delim, &phrase_ptr))) {

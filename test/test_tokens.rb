@@ -75,4 +75,11 @@ describe 'Chipper tokens' do
       Chipper.tokens('Flopper Bopper. Dopper').must_equal @expected
     end
   end
+
+  describe 'unicode' do
+    it 'should skip quotes and handle fullwidth @' do
+      text = "hello world, ain\u2019t this \uff20cool huh\u201d"
+      Chipper.tokens(text).must_equal [["hello", "world"], ["aint", "this"], ["huh"]]
+    end
+  end
 end
