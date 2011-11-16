@@ -37,6 +37,11 @@ end
 srcprefix = '{re2,src}'
 
 exit 1 unless library_installed? 'stemmer', apt_install_hint('libstemmer-dev')
+
+%w(icui18n icuuc icudata icuio).each do |name|
+  exit 1 unless library_installed? name, apt_install_hint('libicu-dev')
+end
+
 create_makefile 'chipper', srcprefix
 
 # NOTE mkmk.rb is shit, it does not allow for multiple source dirs - hence the following hack.
