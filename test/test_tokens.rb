@@ -90,6 +90,7 @@ describe 'Chipper tokens' do
 
     it 'should kill tokens that are part, or all unicode' do
       text = "hello world, \u2020\uff26\u201f \u2021\uff36\u210fcool"
+      Chipper.skip_token_pattern %q{^\W.*$}
       Chipper.tokens(text).must_equal [["hello", "world"]]
     end
   end

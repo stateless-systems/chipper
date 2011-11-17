@@ -131,8 +131,8 @@ VALUE urls(VALUE self, VALUE text) {
 }
 
 VALUE tokens(VALUE self, VALUE text) {
-    static const char *phrase_delim = "\r\n:,;'\"{}()[]./\\%*|&!~`$+=<>?";
-    static const char *word_delim   = "\t- ";
+    static const char *phrase_delim = "\r\n:,;'\"{}()[]./\\%*|&!~`$+=<>?^";
+    static const char *word_delim   = "_\t- ";
 
     if (NIL_P(text) || TYPE(text) != T_STRING)
         rb_raise(rb_eArgError, "requires tweet text");
