@@ -13,24 +13,23 @@ fast screen name, hashtag, url extraction and tokenizer for tweets.
       #skip_users
       #skip_hashtags
       #skip_tokens
+      #skip_token_pattern
 
 == Usage
 
     require 'chipper'
-    
+
     Chipper.skip_users(%w(youtube msn))
     Chipper.skip_hashtags(%w(abc24 cnn))
-    Chipper.skip_tokens(%w(story tv why that get from your http https com))
+    Chipper.skip_tokens(%w(story tv why that get from your))
+    Chipper.skip_token_pattern '^vimeo$'
 
     tweet = "@youtube, why is that stories about @apple on #cnn always get #removed from your website http://youtube.com"
     Chipper.users(tweet)    #=> ["@apple"]
     Chipper.hashtags(tweet) #=> ["#removed"]
     Chipper.urls(tweet)     #=> ["http://youtube.com"]
     Chipper.tokens(tweet)   #=> [["about", "always", "website"], ["youtube"]]
-
-== Warning
-
-the api is *not* thread safe, so use it carefully.
+    Chipper.entities(tweet) #=> {users: ["@apple"], hashtags: ["#removed"], urls: ["http://youtube.com"], tokens: [["about", "always", "website"], ["youtube"]]}
 
 == License
 

@@ -31,4 +31,14 @@ describe 'Chipper entities' do
     Chipper.skip_hashtags(%w(cnn))
     Chipper.hashtags(@tweet).must_equal %w(#removed)
   end
+
+  it 'should return all entities using #entities method' do
+    expected = {}
+    expected.merge! users:    %w(@youtube @apple)
+    expected.merge! hashtags: %w(#cnn #removed)
+    expected.merge! urls:     %w(http://www1.youtube.com/videos/?)
+    expected.merge! tokens:   [["why"], ["that", "stories", "abt"], ["always", "get"], ["from"]]
+
+    Chipper.entities(@tweet).must_equal expected
+  end
 end

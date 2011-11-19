@@ -31,8 +31,7 @@ RE2 *SkipTokenRE;
 RE2 *SkipTokenPatternRE;
 
 RE2::Options DefaultMatchOptions;
-VALUE id_users, id_hashtags, id_urls;
-struct sb_stemmer *ENStemmer;
+VALUE id_users, id_hashtags, id_urls, id_tokens;
 
 string build_alternating_expr(VALUE list) {
     VALUE v;
@@ -67,78 +66,199 @@ void remove(char *string, const char *pattern) {
     }
 }
 
+typedef struct List {
+    char *text;
+    struct List *next;
+} List;
 
-// API
+typedef struct DList {
+    List *list;
+    struct DList *next;
+} DList;
 
-VALUE users(VALUE self, VALUE text) {
-    if (NIL_P(text) || TYPE(text) != T_STRING)
-        rb_raise(rb_eArgError, "Chipper#users requires tweet text");
+void list_free(List *list) {
+    List *curr = list;
+    while (list) {
+        list = curr->next;
+        if (curr->text)
+            free(curr->text);
+        free(curr);
+        curr = list;
+    }
+}
 
-    VALUE users = rb_ary_new();
-    rb_encoding *encoding = rb_enc_get(text);
+List* list_push(List *root, List *curr, const char *text, int size) {
+    List *node = (List *)malloc(sizeof(List));
+    if (!node) {
+        list_free(root);
+        return 0;
+    }
+
+    node->text = (char *)malloc(size + 1);
+    if (!node->text) {
+        free(node);
+        list_free(root);
+        return 0;
+    }
+
+    memcpy(node->text, text, size);
+
+    node->next       = 0;
+    node->text[size] = 0;
+
+    if (curr)
+        curr->next = node;
+
+    return node;
+}
+
+VALUE list_to_array(List *node, rb_encoding *encoding) {
+    List *next;
+    VALUE array = rb_ary_new();
+
+    while (node) {
+        rb_ary_push(array, rb_enc_str_new(node->text, strlen(node->text), encoding));
+        next = node->next;
+        free(node->text);
+        free(node);
+        node = next;
+    }
+
+    return array;
+}
+
+void dlist_free(DList *dlist) {
+    DList *curr = dlist;
+    while (dlist) {
+        dlist = curr->next;
+        if (curr->list)
+            list_free(curr->list);
+        free(curr);
+        curr = dlist;
+    }
+}
+
+DList* dlist_push(DList *root, DList *curr, List *list) {
+    DList *node = (DList *)malloc(sizeof(DList));
+    if (!node) {
+        dlist_free(root);
+        list_free(list);
+        return 0;
+    }
+
+    node->list = list;
+    node->next = 0;
+
+    if (curr)
+        curr->next = node;
+
+    return node;
+}
+
+VALUE dlist_to_array(DList *node, rb_encoding *encoding) {
+    DList *next;
+    VALUE array = rb_ary_new();
+
+    while (node) {
+        rb_ary_push(array, list_to_array(node->list, encoding));
+        next = node->next;
+        free(node);
+        node = next;
+    }
+
+    return array;
+}
+
+List* tbr_users(VALUE text) {
+    List *lroot = 0, *lcurr = 0, *lnode;
 
     string match;
     StringPiece input;
     input.set(RSTRING_PTR(text), RSTRING_LEN(text));
     while (RE2::FindAndConsume(&input, *UserRE, &match)) {
         if (UserStopRE && RE2::FullMatch(match, *UserStopRE)) continue;
-        rb_ary_push(users, rb_enc_str_new(match.data(), match.size(), encoding));
+
+        if (!(lnode = list_push(lroot, lcurr, match.data(), match.size())))
+            rb_raise(rb_eNoMemError, "ran out of memory while storing result");
+
+        if (lcurr)
+            lcurr = lnode;
+        else
+            lroot = lcurr = lnode;
     }
 
-    return users;
+    return lroot;
 }
 
-VALUE hashtags(VALUE self, VALUE text) {
-    if (NIL_P(text) || TYPE(text) != T_STRING)
-        rb_raise(rb_eArgError, "Chipper#hashtags requires tweet text");
 
-    VALUE hashtags = rb_ary_new();
-    rb_encoding *encoding = rb_enc_get(text);
+List* tbr_hashtags(VALUE text) {
+    List *lroot = 0, *lcurr = 0, *lnode;
+
     string match;
     StringPiece input;
     input.set(RSTRING_PTR(text), RSTRING_LEN(text));
     while (RE2::FindAndConsume(&input, *HashTagRE, &match)) {
         if (match.size() < MIN_TAG_SIZE) continue;
         if (HashTagStopRE && RE2::FullMatch(match, *HashTagStopRE)) continue;
-        rb_ary_push(hashtags, rb_enc_str_new(match.data(), match.size(), encoding));
+
+        if (!(lnode = list_push(lroot, lcurr, match.data(), match.size())))
+            rb_raise(rb_eNoMemError, "ran out of memory while storing result");
+
+        if (lcurr)
+            lcurr = lnode;
+        else
+            lroot = lcurr = lnode;
     }
 
-    return hashtags;
+    return lroot;
 }
 
-VALUE urls(VALUE self, VALUE text) {
-    if (NIL_P(text) || TYPE(text) != T_STRING)
-        rb_raise(rb_eArgError, "Chipper#urls requires tweet text");
-
-    VALUE urls            = rb_ary_new();
-    rb_encoding *encoding = rb_enc_get(text);
+List* tbr_urls(VALUE text) {
+    List *lroot = 0, *lcurr = 0, *lnode;
 
     int size;
     string match;
     StringPiece input;
     input.set(RSTRING_PTR(text), RSTRING_LEN(text));
-
     while (RE2::FindAndConsume(&input, *UrlRE, &match)) {
-        // TODO false positives ?
-        // we don't want urls terminating with ! or .
         size = match.size();
         if (match.data()[size - 1] == '!') size--;
         if (match.data()[size - 1] == '.') size--;
-        rb_ary_push(urls, rb_enc_str_new(match.data(), size, encoding));
+
+        if (!(lnode = list_push(lroot, lcurr, match.data(), size)))
+            rb_raise(rb_eNoMemError, "ran out of memory while storing result");
+
+        if (lcurr)
+            lcurr = lnode;
+        else
+            lroot = lcurr = lnode;
     }
 
-    return urls;
+    return lroot;
 }
 
-VALUE tokens(VALUE self, VALUE text) {
+void inline dlist_add_segment(DList **dlroot, DList **dlcurr, List **lroot, List **lcurr, sb_stemmer *stemmer) {
+    DList *dlnode = dlist_push(*dlroot, *dlcurr, *lroot);
+
+    if (!dlnode) {
+        sb_stemmer_delete(stemmer);
+        rb_raise(rb_eNoMemError, "ran out of memory while storing result");
+    }
+
+    if (*dlcurr)
+        *dlcurr = dlnode;
+    else
+        *dlroot = *dlcurr = dlnode;
+
+    *lroot = *lcurr = 0;
+}
+
+DList* tbr_tokens(VALUE text) {
     static const char *phrase_delim = "\r\n:,;'\"{}()[]./\\%*|&!~`$+=<>?^";
     static const char *word_delim   = "_\t- ";
 
-    if (NIL_P(text) || TYPE(text) != T_STRING)
-        rb_raise(rb_eArgError, "requires tweet text");
-
-    VALUE segment, result = rb_ary_new();
-    rb_encoding *encoding = rb_enc_get(text);
+    DList *dlroot = 0, *dlcurr = 0;
+    List *lroot   = 0, *lcurr  = 0, *lnode;
 
     char *token, *ptr, *buffer = (char*)calloc(RSTRING_LEN(text) + 1, 1), *phrase_ptr, *word_ptr;
 
@@ -219,7 +339,7 @@ VALUE tokens(VALUE self, VALUE text) {
     replace(ptr, "\u300F", '>');
     replace(ptr, "\u301F", '>');
 
-    segment = rb_ary_new();
+    struct sb_stemmer *en_stemmer = sb_stemmer_new("english", "UTF_8");
     while ((token = strtok_r(ptr, phrase_delim, &phrase_ptr))) {
         ptr = token;
 
@@ -227,62 +347,101 @@ VALUE tokens(VALUE self, VALUE text) {
             ptr = NULL;
 
             if (strlen(token) < MIN_WORD_SIZE || *token == '@' || *token == '#') {
-                if (RARRAY_LEN(segment) > 0) {
-                    rb_ary_push(result, segment);
-                    segment = rb_ary_new();
-                }
+                if (lroot)
+                    dlist_add_segment(&dlroot, &dlcurr, &lroot, &lcurr, en_stemmer);
                 continue;
             }
 
-            const sb_symbol *sbstem = sb_stemmer_stem(ENStemmer, (sb_symbol *)token, strlen(token));
-            uint32_t sbstem_len     = sb_stemmer_length(ENStemmer);
+            const sb_symbol *sbstem = sb_stemmer_stem(en_stemmer, (sb_symbol *)token, strlen(token));
+            uint32_t sbstem_len     = sb_stemmer_length(en_stemmer);
 
             if (sbstem_len < MIN_WORD_SIZE) {
-                if (RARRAY_LEN(segment) > 0) {
-                    rb_ary_push(result, segment);
-                    segment = rb_ary_new();
-                }
+                if (lroot)
+                    dlist_add_segment(&dlroot, &dlcurr, &lroot, &lcurr, en_stemmer);
                 continue;
             }
 
             if (SkipTokenRE) {
                 if (RE2::FullMatch(token, *SkipTokenRE)) {
-                    if (RARRAY_LEN(segment) > 0) {
-                        rb_ary_push(result, segment);
-                        segment = rb_ary_new();
-                    }
+                    if (lroot)
+                        dlist_add_segment(&dlroot, &dlcurr, &lroot, &lcurr, en_stemmer);
                     continue;
                 }
 
                 string stem((char*)sbstem, sbstem_len);
                 if (RE2::FullMatch(stem,  *SkipTokenRE)) {
-                    if (RARRAY_LEN(segment) > 0) {
-                        rb_ary_push(result, segment);
-                        segment = rb_ary_new();
-                    }
+                    if (lroot)
+                        dlist_add_segment(&dlroot, &dlcurr, &lroot, &lcurr, en_stemmer);
                     continue;
                 }
             }
 
             if (SkipTokenPatternRE && RE2::FullMatch(token, *SkipTokenPatternRE)) {
-                if (RARRAY_LEN(segment) > 0) {
-                    rb_ary_push(result, segment);
-                    segment = rb_ary_new();
-                }
+                if (lroot)
+                    dlist_add_segment(&dlroot, &dlcurr, &lroot, &lcurr, en_stemmer);
                 continue;
             }
 
-            rb_ary_push(segment, rb_enc_str_new(token, strlen(token), encoding));
+            if (!(lnode = list_push(lroot, lcurr, token, strlen(token)))) {
+                dlist_free(dlroot);
+                sb_stemmer_delete(en_stemmer);
+                rb_raise(rb_eNoMemError, "ran out of memory while storing result");
+            }
+
+            if (lcurr)
+                lcurr = lnode;
+            else
+                lroot = lcurr = lnode;
         }
 
         ptr = NULL;
-        if (RARRAY_LEN(segment) > 0) {
-            rb_ary_push(result, segment);
-            segment = rb_ary_new();
-        }
+        if (lroot)
+            dlist_add_segment(&dlroot, &dlcurr, &lroot, &lcurr, en_stemmer);
     }
 
+    sb_stemmer_delete(en_stemmer);
     free(buffer);
+    return dlroot;
+}
+
+#define TBR_FUNC(a)         (VALUE (*)(void*))(a)
+#define TBR_CALL(a, text)   rb_thread_blocking_region(TBR_FUNC(a), (void *)text, RUBY_UBF_PROCESS, 0)
+
+// API
+
+VALUE users(VALUE self, VALUE text, bool validated = false) {
+    if (!validated && (NIL_P(text) || TYPE(text) != T_STRING))
+        rb_raise(rb_eArgError, "requires tweet text");
+    return list_to_array((List*)TBR_CALL(tbr_users, text), rb_enc_get(text));
+}
+
+VALUE hashtags(VALUE self, VALUE text, bool validated = false) {
+    if (!validated && (NIL_P(text) || TYPE(text) != T_STRING))
+        rb_raise(rb_eArgError, "requires tweet text");
+    return list_to_array((List*)TBR_CALL(tbr_hashtags, text), rb_enc_get(text));
+}
+
+VALUE urls(VALUE self, VALUE text, bool validated = false) {
+    if (!validated && (NIL_P(text) || TYPE(text) != T_STRING))
+        rb_raise(rb_eArgError, "requires tweet text");
+    return list_to_array((List*)TBR_CALL(tbr_urls, text), rb_enc_get(text));
+}
+
+VALUE tokens(VALUE self, VALUE text, bool validated = false) {
+    if (!validated && (NIL_P(text) || TYPE(text) != T_STRING))
+        rb_raise(rb_eArgError, "requires tweet text");
+    return dlist_to_array((DList*)TBR_CALL(tbr_tokens, text), rb_enc_get(text));
+}
+
+VALUE entities(VALUE self, VALUE text) {
+    if (NIL_P(text) || TYPE(text) != T_STRING)
+        rb_raise(rb_eArgError, "requires tweet text");
+
+    VALUE result = rb_hash_new();
+    rb_hash_aset(result, id_users,    users(self, text, true));
+    rb_hash_aset(result, id_hashtags, hashtags(self, text, true));
+    rb_hash_aset(result, id_urls,     urls(self, text, true));
+    rb_hash_aset(result, id_tokens,   tokens(self, text, true));
     return result;
 }
 
@@ -330,15 +489,19 @@ VALUE skip_tokens(VALUE self, VALUE list) {
     if (TYPE(list) != T_ARRAY)
         rb_raise(rb_eArgError, "requires a list of words");
 
+    struct sb_stemmer *en_stemmer = sb_stemmer_new("english", "UTF_8");
+
     // add stems as well
     int i, max = RARRAY_LEN(list);
     for (int i = 0; i < max; i++) {
         VALUE word              = rb_ary_entry(list, i);
         rb_encoding *encoding   = rb_enc_get(word);
-        const sb_symbol *sbstem = sb_stemmer_stem(ENStemmer, (sb_symbol *)RSTRING_PTR(word), RSTRING_LEN(word));
-        uint32_t sbstem_len     = sb_stemmer_length(ENStemmer);
+        const sb_symbol *sbstem = sb_stemmer_stem(en_stemmer, (sb_symbol *)RSTRING_PTR(word), RSTRING_LEN(word));
+        uint32_t sbstem_len     = sb_stemmer_length(en_stemmer);
         rb_ary_push(list, rb_enc_str_new((char*)sbstem, sbstem_len, encoding));
     }
+
+    sb_stemmer_delete(en_stemmer);
 
     // too bad, no uniq c api
     rb_funcall(list, rb_intern("uniq!"), 0);
@@ -367,7 +530,6 @@ VALUE skip_token_pattern(VALUE self, VALUE re) {
 
 extern "C" {
     void Init_chipper(void) {
-        ENStemmer          = sb_stemmer_new("english", "UTF_8");
         UserRE             = new RE2("(?:^|[^[:alnum:]])+([@＠][[:alnum:]_\\-]+)");
         HashTagRE          = new RE2("(?:^|[^[:alnum:]])+(#[[:alnum:]}_]+)");
         UrlRE              = new RE2("(https?://[[:alnum:]\\-_\\.:@]+\\.[[:alnum:]\\-_]+/?[^\\s\\r\\n]*)");
@@ -382,16 +544,19 @@ extern "C" {
         id_users    = ID2SYM(rb_intern("users"));
         id_hashtags = ID2SYM(rb_intern("hashtags"));
         id_urls     = ID2SYM(rb_intern("urls"));
+        id_tokens   = ID2SYM(rb_intern("tokens"));
 
         rb_gc_mark(id_users);
         rb_gc_mark(id_hashtags);
         rb_gc_mark(id_urls);
+        rb_gc_mark(id_tokens);
 
         VALUE mTE = rb_define_module("Chipper");
         rb_define_module_function(mTE, "users",              RUBY_METHOD_FUNC(users), 1);
         rb_define_module_function(mTE, "hashtags",           RUBY_METHOD_FUNC(hashtags), 1);
         rb_define_module_function(mTE, "urls",               RUBY_METHOD_FUNC(urls), 1);
         rb_define_module_function(mTE, "tokens",             RUBY_METHOD_FUNC(tokens), 1);
+        rb_define_module_function(mTE, "entities",           RUBY_METHOD_FUNC(entities), 1);
         rb_define_module_function(mTE, "skip_users",         RUBY_METHOD_FUNC(skip_users), 1);
         rb_define_module_function(mTE, "skip_hashtags",      RUBY_METHOD_FUNC(skip_hashtags), 1);
         rb_define_module_function(mTE, "skip_tokens",        RUBY_METHOD_FUNC(skip_tokens), 1);
