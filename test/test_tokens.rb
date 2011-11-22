@@ -80,6 +80,11 @@ describe 'Chipper tokens' do
     it 'should segment correctly on non-word' do
       Chipper.tokens('Flopper Bopper. Dopper').must_equal @expected
     end
+
+    it 'should not get stuffs from users or hashtags' do
+      Chipper.tokens("melbourne  @sydney_islame or #brisbane_humid").must_equal [["melbourne"]]
+    end
+
   end
 
   describe 'unicode' do
@@ -88,10 +93,10 @@ describe 'Chipper tokens' do
       Chipper.tokens(text).must_equal [["hello", "world"], ["aint", "this"], ["huh"]]
     end
 
-    it 'should kill tokens that are part, or all unicode' do
-      text = "hello world, \u2020\uff26\u201f \u2021\uff36\u210fcool"
-      Chipper.skip_token_pattern %q{^\W.*$}
-      Chipper.tokens(text).must_equal [["hello", "world"]]
+    it 'should kill tokens that start with unicode' do
+      text = "hello world, \u2020\uff26\u201f \u2021\uff36\u210fcool 12TH 123345134 awesome\u2020\uff26\u201f"
+      Chipper.skip_token_pattern %q{^(?:[\d\-]+)(?:am|pm|th|st|rd)?$|^\W.*$}
+      Chipper.tokens(text).must_equal [["hello", "world"], ["awesome\u2020\uff26\u201f"]]
     end
   end
 end
