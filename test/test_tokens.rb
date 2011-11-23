@@ -85,6 +85,9 @@ describe 'Chipper tokens' do
       Chipper.tokens("melbourne  @sydney_islame or #brisbane_humid").must_equal [["melbourne"]]
     end
 
+    it 'should not add random newlines becasue there is underscores, full stop, space then url' do
+      Chipper.tokens("one__two.three http://t.co").must_equal [["one","two"],["three"]]
+    end
   end
 
   describe 'unicode' do
