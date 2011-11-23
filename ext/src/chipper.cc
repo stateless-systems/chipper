@@ -255,7 +255,7 @@ void inline dlist_add_segment(DList **dlroot, DList **dlcurr, List **lroot, List
 
 DList* tbr_tokens(VALUE text) {
     static const char *phrase_delim = "\r\n:,;'\"{}()[]./\\%*|&!~`$+=<>?^";
-    static const char *word_delim   = "_\t- ";
+    static const char *word_delim   = "\t- ";
 
     DList *dlroot = 0, *dlcurr = 0;
     List *lroot   = 0, *lcurr  = 0, *lnode;
@@ -351,6 +351,20 @@ DList* tbr_tokens(VALUE text) {
                     dlist_add_segment(&dlroot, &dlcurr, &lroot, &lcurr, en_stemmer);
                 continue;
             }
+
+            // tokenize word again on underscore
+            char *wpt, *wps;
+            if ((wpt = strtok_r(token, "_", &wps))) {
+                // printf("token: %s at: %d wpt: %s at: %d\n", token, token-buffer, wpt, wpt-buffer);
+                if (wpt != token) {
+                    word_ptr = wpt;
+                    *wps     = ' ';
+                }
+                else if (word_ptr - wps > 1)
+                    word_ptr = wps;
+            }
+
+            if (*token == '_') continue;
 
             const sb_symbol *sbstem = sb_stemmer_stem(en_stemmer, (sb_symbol *)token, strlen(token));
             uint32_t sbstem_len     = sb_stemmer_length(en_stemmer);
