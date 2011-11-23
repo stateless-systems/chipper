@@ -88,6 +88,10 @@ describe 'Chipper tokens' do
     it 'should not add random newlines becasue there is underscores, full stop, space then url' do
       Chipper.tokens("one__two.three http://t.co").must_equal [["one","two"],["three"]]
     end
+
+    it 'should not add random newlines becasue there is leading underscore colon space then url' do
+      Chipper.tokens('bushes _purple: http://t.co/').must_equal [["bushes","purple"]]
+    end
   end
 
   describe 'unicode' do
