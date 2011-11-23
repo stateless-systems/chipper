@@ -92,6 +92,11 @@ describe 'Chipper tokens' do
     it 'should not add random newlines becasue there is leading underscore colon space then url' do
       Chipper.tokens('bushes _purple: http://t.co/').must_equal [["bushes","purple"]]
     end
+
+    it 'should group and segment across repeated or anchored underscores' do
+      Chipper.tokens('_foo bar._baz: hello__world! http://t.co/').must_equal [%w(foo bar), %w(baz), %w(hello world)]
+      Chipper.tokens('_foo bar._baz:_hello #hi,world').must_equal [%w(foo bar), %w(baz), %w(hello), %w(world)]
+    end
   end
 
   describe 'unicode' do
