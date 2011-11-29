@@ -22,6 +22,10 @@ describe 'Chipper entities' do
     Chipper.urls(@tweet).must_equal %w(http://www1.youtube.com/videos/?)
   end
 
+  it 'should extract t.co urls cleanly w/quote' do
+    Chipper.urls("Hllo http://t.co/97CLxVkD\" http://t.co/97, http://t.co/xx. http://t.co/xxx' damn!").must_equal ["http://t.co/97CLxVkD","http://t.co/97","http://t.co/xx","http://t.co/xxx"]
+  end
+
   it 'should skip users' do
     Chipper.skip_users(%w(youtube))
     Chipper.users(@tweet).must_equal %w(@apple)
