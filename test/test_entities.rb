@@ -22,7 +22,7 @@ describe 'Chipper entities' do
     Chipper.urls(@tweet).must_equal %w(http://www1.youtube.com/videos/?)
   end
 
-  it 'should extract t.co urls cleanly w/quote' do
+  it 'should extract t.co urls cleanly w/quote' do # NB, these should be only [a-zA-Z0-9]+ in the path in fact, not /w as that will include unicode chars
     Chipper.urls("Hllo http://t.co/97CLxVkD\" http://t.co/97, http://t.co/xx. http://t.co/xxx' damn!").must_equal ["http://t.co/97CLxVkD","http://t.co/97","http://t.co/xx","http://t.co/xxx"]
   end
 
