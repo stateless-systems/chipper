@@ -289,48 +289,63 @@ DList* tbr_tokens(VALUE text) {
         memset(ptr1, '\n', ptr2 - ptr1);
     }
 
-    // remove blank out single quotes
+    // remove blank out single quotes, prime
     remove(ptr, "'");
     remove(ptr, "\u2019");
+    remove(ptr, "\u2032");
 
     // segment at unicode quotes
     replace(ptr, "\u2018", '\t');
     replace(ptr, "\u201c", '\t');
     replace(ptr, "\u201d", '\t');
+    replace(ptr, "\u201e", '\t');
+    replace(ptr, "\u201f", '\t');
+    replace(ptr, "\u2033", '\t');
+    replace(ptr, "\u2034", '\t');
+    replace(ptr, "\u2035", '\t');
+    replace(ptr, "\u2036", '\t');
+    replace(ptr, "\u2037", '\t');
+
+    // angle quote
+    replace(ptr, "\u2039", '<');
+    replace(ptr, "\u203A", '>');
+
+    // slash
+    replace(ptr, "\u2044", '/');
 
     // fullwidth AT => @
     replace(ptr, "\uff20", '@');
 
     // unicode spaces
-    replace(ptr, "\u2000 ", ' ');
-    replace(ptr, "\u2001 ", ' ');
-    replace(ptr, "\u2002 ", ' ');
-    replace(ptr, "\u2003 ", ' ');
-    replace(ptr, "\u2004 ", ' ');
-    replace(ptr, "\u2005 ", ' ');
-    replace(ptr, "\u2006 ", ' ');
-    replace(ptr, "\u2007 ", ' ');
-    replace(ptr, "\u2008 ", ' ');
-    replace(ptr, "\u2009 ", ' ');
-    replace(ptr, "\u200A ", ' ');
-    replace(ptr, "\u200B ", ' ');
-    replace(ptr, "\u202F ", ' ');
-    replace(ptr, "\u3000 ", ' ');
+    replace(ptr, "\u2000", ' ');
+    replace(ptr, "\u2001", ' ');
+    replace(ptr, "\u2002", ' ');
+    replace(ptr, "\u2003", ' ');
+    replace(ptr, "\u2004", ' ');
+    replace(ptr, "\u2005", ' ');
+    replace(ptr, "\u2006", ' ');
+    replace(ptr, "\u2007", ' ');
+    replace(ptr, "\u2008", ' ');
+    replace(ptr, "\u2009", ' ');
+    replace(ptr, "\u200A", ' ');
+    replace(ptr, "\u200B", ' ');
+    replace(ptr, "\u202F", ' ');
+    replace(ptr, "\u3000", ' ');
 
     // unicode dashes
-    replace(ptr, "\u058A ", '-');
-    replace(ptr, "\u1806 ", '-');
-    replace(ptr, "\u2010 ", '-');
-    replace(ptr, "\u2011 ", '-');
-    replace(ptr, "\u2012 ", '-');
-    replace(ptr, "\u2013 ", '-');
-    replace(ptr, "\u2014 ", '-');
-    replace(ptr, "\u2015 ", '-');
-    replace(ptr, "\u207B ", '-');
-    replace(ptr, "\u208B ", '-');
-    replace(ptr, "\u2212 ", '-');
-    replace(ptr, "\u301C ", '-');
-    replace(ptr, "\u3030 ", '-');
+    replace(ptr, "\u058A", '-');
+    replace(ptr, "\u1806", '-');
+    replace(ptr, "\u2010", '-');
+    replace(ptr, "\u2011", '-');
+    replace(ptr, "\u2012", '-');
+    replace(ptr, "\u2013", '-');
+    replace(ptr, "\u2014", '-');
+    replace(ptr, "\u2015", '-');
+    replace(ptr, "\u207B", '-');
+    replace(ptr, "\u208B", '-');
+    replace(ptr, "\u2212", '-');
+    replace(ptr, "\u301C", '-');
+    replace(ptr, "\u3030", '-');
 
     // corner brackets
     replace(ptr, "\u300C", '<');

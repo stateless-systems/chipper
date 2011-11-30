@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
   s.name              = "chipper"
-  s.version           = "0.3.2"
-  s.date              = "2011-11-23"
+  s.version           = "0.3.3"
+  s.date              = "2011-11-30"
   s.authors           = "Bharanee Rathna"
   s.email             = "deepfryed@gmail.com"
   s.summary           = "twitter text extractor"

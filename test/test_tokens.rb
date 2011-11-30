@@ -108,7 +108,11 @@ describe 'Chipper tokens' do
     it 'should kill tokens that start with unicode' do
       text = "hello world, \u2020\uff26\u201f \u2021\uff36\u210fcool 12TH 123345134 awesome\u2020\uff26\u201f"
       Chipper.skip_token_pattern %q{^(?:[\d\-]+)(?:am|pm|th|st|rd)?$|^\W.*$}
-      Chipper.tokens(text).must_equal [["hello", "world"], ["awesome\u2020\uff26\u201f"]]
+      Chipper.tokens(text).must_equal [["hello", "world"], ["awesome\u2020\uff26"]]
+    end
+
+    it 'should segment on unicode puncutation' do
+      Chipper.tokens("\u2039Hello\u203aWorld").must_equal [["hello"], ["world"]]
     end
   end
 end
