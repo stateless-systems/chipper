@@ -2,7 +2,7 @@ require 'helper'
 
 describe 'Chipper entities' do
   before do
-    @tweet = "@youtube, why is that stories abt @apple on #cnn always get #removed from http://www1.youtube.com/videos/?"
+    @tweet = "@youtube, why is that stories abt @apple on #cnn always get #removed from http://t.co/IsSh1t"
   end
 
   after do
@@ -19,7 +19,7 @@ describe 'Chipper entities' do
   end
 
   it 'should extract urls' do
-    Chipper.urls(@tweet).must_equal %w(http://www1.youtube.com/videos/?)
+    Chipper.urls(@tweet).must_equal %w(http://t.co/IsSh1t)
   end
 
   it 'should extract t.co urls cleanly w/quote' do # NB, these should be only [a-zA-Z0-9]+ in the path in fact, not /w as that will include unicode chars
@@ -40,7 +40,7 @@ describe 'Chipper entities' do
     expected = {}
     expected.merge! users:    %w(@youtube @apple)
     expected.merge! hashtags: %w(#cnn #removed)
-    expected.merge! urls:     %w(http://www1.youtube.com/videos/?)
+    expected.merge! urls:     %w(http://t.co/IsSh1t)
     expected.merge! tokens:   [["why"], ["that", "stories", "abt"], ["always", "get"], ["from"]]
 
     Chipper.entities(@tweet).must_equal expected
