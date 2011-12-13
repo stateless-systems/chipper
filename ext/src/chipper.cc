@@ -278,14 +278,14 @@ DList* tbr_tokens(VALUE text) {
     char *ptr1, *ptr2 = ptr;
     while ((ptr1 = STRSTR(ptr2, "http://"))) {
         ptr2 = strtok_r(ptr1, "\r\n\t ", &phrase_ptr);
-        ptr2 = phrase_ptr;
+        ptr2 = phrase_ptr ? phrase_ptr : buffer + RSTRING_LEN(text);
         memset(ptr1, '\n', ptr2 - ptr1);
     }
 
     ptr2 = ptr;
     while ((ptr1 = STRSTR(ptr2, "https://"))) {
         ptr2 = strtok_r(ptr1, "\r\n\t ", &phrase_ptr);
-        ptr2 = phrase_ptr;
+        ptr2 = phrase_ptr ? phrase_ptr : buffer + RSTRING_LEN(text);
         memset(ptr1, '\n', ptr2 - ptr1);
     }
 
