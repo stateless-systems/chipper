@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.summary           = "twitter text extractor"
   s.description       = "twitter text extraction utilities"
   s.homepage          = "http://github.com/deepfryed/chipper"
-  s.files             = Dir["ext/**/*.{cc,c,mak,h}"] + %w(README.rdoc ext/*.rb) + Dir["test/*.rb"]
+  s.files             = Dir["ext/**/*.{cc,c,mak,h}"] + Dir["ext/*.rb"] + Dir["test/*.rb"] + %w(ext/libstemmer_c/Makefile README.rdoc) 
   s.extra_rdoc_files  = %w(README.rdoc)
   s.extensions        = %w(ext/extconf.rb)
   s.require_paths     = %w(lib)
