@@ -555,8 +555,9 @@ extern "C" {
     void Init_chipper(void) {
         UserRE             = new RE2("(?:^|[^[:alnum:]])+([@＠][[:alnum:]_\\-]+)");
         HashTagRE          = new RE2("(?:^|[^[:alnum:]])+(#[[:alnum:]}_]+)");
-     // TODO using hack instead
      // UrlRE              = new RE2("(https?://[[:alnum:]\\-_\\.:@]+\\.[[:alnum:]\\-_]+/?[^\\s\\r\\n]*)");
+
+     // TODO using the following t.co shortcut instead
         UrlRE              = new RE2("(https?://t.co/[A-Za-z0-9]+)");
 
         UserStopRE         = NULL;
