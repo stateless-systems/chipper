@@ -4,6 +4,7 @@
 #include "re2/re2.h"
 #include "re2/stringpiece.h"
 #include "libstemmer.h"
+#include "version.h"
 
 #if __GNUC__
 #define STRSTR strcasestr
@@ -578,15 +579,17 @@ extern "C" {
         rb_global_variable(&id_urls);
         rb_global_variable(&id_tokens);
 
-        VALUE mTE = rb_define_module("Chipper");
-        rb_define_module_function(mTE, "users",              RUBY_METHOD_FUNC(users), 1);
-        rb_define_module_function(mTE, "hashtags",           RUBY_METHOD_FUNC(hashtags), 1);
-        rb_define_module_function(mTE, "urls",               RUBY_METHOD_FUNC(urls), 1);
-        rb_define_module_function(mTE, "tokens",             RUBY_METHOD_FUNC(tokens), 1);
-        rb_define_module_function(mTE, "entities",           RUBY_METHOD_FUNC(entities), 1);
-        rb_define_module_function(mTE, "skip_users",         RUBY_METHOD_FUNC(skip_users), 1);
-        rb_define_module_function(mTE, "skip_hashtags",      RUBY_METHOD_FUNC(skip_hashtags), 1);
-        rb_define_module_function(mTE, "skip_tokens",        RUBY_METHOD_FUNC(skip_tokens), 1);
-        rb_define_module_function(mTE, "skip_token_pattern", RUBY_METHOD_FUNC(skip_token_pattern), 1);
+        VALUE mChipper = rb_define_module("Chipper");
+        rb_define_module_function(mChipper, "users",              RUBY_METHOD_FUNC(users), 1);
+        rb_define_module_function(mChipper, "hashtags",           RUBY_METHOD_FUNC(hashtags), 1);
+        rb_define_module_function(mChipper, "urls",               RUBY_METHOD_FUNC(urls), 1);
+        rb_define_module_function(mChipper, "tokens",             RUBY_METHOD_FUNC(tokens), 1);
+        rb_define_module_function(mChipper, "entities",           RUBY_METHOD_FUNC(entities), 1);
+        rb_define_module_function(mChipper, "skip_users",         RUBY_METHOD_FUNC(skip_users), 1);
+        rb_define_module_function(mChipper, "skip_hashtags",      RUBY_METHOD_FUNC(skip_hashtags), 1);
+        rb_define_module_function(mChipper, "skip_tokens",        RUBY_METHOD_FUNC(skip_tokens), 1);
+        rb_define_module_function(mChipper, "skip_token_pattern", RUBY_METHOD_FUNC(skip_token_pattern), 1);
+
+        rb_define_const(mChipper, "VERSION", rb_str_new2(CHIPPER_VERSION));
     }
 }
