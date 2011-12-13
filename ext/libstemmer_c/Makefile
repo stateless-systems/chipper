@@ -1,6 +1,6 @@
 include mkinc.mak
 CC=g++
-CFLAGS=-Iinclude -fPIC -g
+CFLAGS=-Iinclude -fPIC -O3
 all: libstemmer.o stemwords
 libstemmer.o: $(snowball_sources:.c=.o)
 	$(AR) -cru $@ $^

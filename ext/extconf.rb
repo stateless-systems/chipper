@@ -17,7 +17,7 @@ EXTCONFIG['CPP'] = 'g++'
 version  = %x{g++ --version | head -n1}.strip.sub(%r{^.* ([\d\.]+)$}, '\1')
 maj, min = version.split(/\./).values_at(0, 1).map(&:to_i)
 
-$CFLAGS  = '-pthread -Wno-sign-compare -g '
+$CFLAGS  = '-pthread -Wno-sign-compare '
 $CFLAGS += maj > 3 && min > 5 ? '-Ofast ' : '-O3 '
 $CFLAGS += '-I/usr/include -I/opt/local/include -I/usr/local/include'
 
