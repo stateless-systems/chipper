@@ -25,7 +25,6 @@ using namespace re2;
 
 RE2 *UserRE;
 RE2 *HashTagRE;
-RE2 *UrlRE;
 RE2 *UserStopRE;
 RE2 *HashTagStopRE;
 RE2 *SkipTokenRE;
@@ -215,26 +214,35 @@ List* tbr_hashtags(VALUE text) {
 }
 
 List* tbr_urls(VALUE text) {
+    int size;
     List *lroot = 0, *lcurr = 0, *lnode;
 
-    int size;
-    string match;
-    StringPiece input;
-    input.set(RSTRING_PTR(text), RSTRING_LEN(text));
-    while (RE2::FindAndConsume(&input, *UrlRE, &match)) {
-        size = match.size();
-        if (match.data()[size - 1] == '!') size--;
-        if (match.data()[size - 1] == '.') size--;
+    char *token, *ptr, *end, *buffer = (char*)calloc(RSTRING_LEN(text) + 1, 1);
+    if (!buffer)
+        rb_raise(rb_eNoMemError, "ran out of memory copying tweet text");
 
-        if (!(lnode = list_push(lroot, lcurr, match.data(), size)))
+    ptr = buffer;
+    end = buffer + RSTRING_LEN(text);
+    bzero(ptr, RSTRING_LEN(text) + 1);
+    memcpy(ptr, RSTRING_PTR(text), RSTRING_LEN(text));
+
+    while ((token = strstr(ptr, "http://t.co/"))) {
+        size = ptr + 20 > end ? end - ptr : 20;
+
+        if (!(lnode = list_push(lroot, lcurr, token, size))) {
+            free(buffer);
             rb_raise(rb_eNoMemError, "ran out of memory while storing result");
+        }
 
         if (lcurr)
             lcurr = lnode;
         else
             lroot = lcurr = lnode;
+
+        ptr = token + size;
     }
 
+    free(buffer);
     return lroot;
 }
 
@@ -556,10 +564,6 @@ extern "C" {
     void Init_chipper(void) {
         UserRE             = new RE2("(?:^|[^[:alnum:]])+([@＠][[:alnum:]_\\-]+)");
         HashTagRE          = new RE2("(?:^|[^[:alnum:]])+(#[[:alnum:]}_]+)");
-     // UrlRE              = new RE2("(https?://[[:alnum:]\\-_\\.:@]+\\.[[:alnum:]\\-_]+/?[^\\s\\r\\n]*)");
-
-     // TODO using the following t.co shortcut instead
-        UrlRE              = new RE2("(https?://t.co/[A-Za-z0-9]+)");
 
         UserStopRE         = NULL;
         HashTagStopRE      = NULL;

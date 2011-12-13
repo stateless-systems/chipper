@@ -24,12 +24,19 @@ fast screen name, hashtag, url extraction and tokenizer for tweets.
     Chipper.skip_tokens(%w(story tv why that get from your))
     Chipper.skip_token_pattern '^vimeo$'
 
-    tweet = "@youtube, why is that stories about @apple on #cnn always get #removed from your website http://youtube.com"
+    tweet = "hi @youtube, could we get #cnn videos so i can #watch it on my @apple tv http://t.co/HM7XoimM"
     Chipper.users(tweet)    #=> ["@apple"]
-    Chipper.hashtags(tweet) #=> ["#removed"]
-    Chipper.urls(tweet)     #=> ["http://youtube.com"]
-    Chipper.tokens(tweet)   #=> [["about", "always", "website"], ["youtube"]]
-    Chipper.entities(tweet) #=> {users: ["@apple"], hashtags: ["#removed"], urls: ["http://youtube.com"], tokens: [["about", "always", "website"], ["youtube"]]}
+    Chipper.hashtags(tweet) #=> ["#watch"]
+    Chipper.urls(tweet)     #=> ["http://t.co/HM7XoimM"]
+    Chipper.tokens(tweet)   #=> [["could"], ["get"], ["videos"], ["can"]]
+
+    # single method that does all of the above and returns a hash.
+    Chipper.entities(tweet)
+
+== Gotchas
+
+* skips tokens shorter than 3 characters
+* only handles t.co urls
 
 == Updating version
 

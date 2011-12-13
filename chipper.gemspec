@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name              = "chipper"
-  s.version           = "0.3.6"
+  s.version           = "0.4.0"
   s.date              = "2011-12-13"
   s.authors           = ["Bharanee Rathna", "John Barratt"]
   s.email             = ["deepfryed@gmail.com", "djon00@gmail.com"]
