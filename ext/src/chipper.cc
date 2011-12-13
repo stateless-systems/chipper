@@ -573,10 +573,10 @@ extern "C" {
         id_urls     = ID2SYM(rb_intern("urls"));
         id_tokens   = ID2SYM(rb_intern("tokens"));
 
-        rb_gc_mark(id_users);
-        rb_gc_mark(id_hashtags);
-        rb_gc_mark(id_urls);
-        rb_gc_mark(id_tokens);
+        rb_global_variable(&id_users);
+        rb_global_variable(&id_hashtags);
+        rb_global_variable(&id_urls);
+        rb_global_variable(&id_tokens);
 
         VALUE mTE = rb_define_module("Chipper");
         rb_define_module_function(mTE, "users",              RUBY_METHOD_FUNC(users), 1);
