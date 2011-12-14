@@ -1,3 +1,4 @@
+# encoding: utf-8
 require 'helper'
 
 describe 'Chipper entities' do
@@ -47,5 +48,10 @@ describe 'Chipper entities' do
     expected.merge! tokens:   [["why"], ["that", "stories", "abt"], ["always", "get"], ["from"]]
 
     Chipper.entities(@tweet).must_equal expected
+  end
+
+  it 'should work around shitty urls' do
+    crap = "foo bar http://t.co/KCZSuVx½"
+    Chipper.urls(crap).must_equal ['http://t.co/KCZSuVx']
   end
 end

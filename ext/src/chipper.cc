@@ -213,6 +213,16 @@ List* tbr_hashtags(VALUE text) {
     return lroot;
 }
 
+int tco_slug_size(char *ptr, int max) {
+    int size = 0;
+    while (*ptr) {
+        if (!isalnum(*ptr) || size >= max) break;
+        size++;
+        ptr++;
+    }
+    return size;
+}
+
 List* tbr_urls(VALUE text) {
     int size;
     List *lroot = 0, *lcurr = 0, *lnode;
@@ -227,7 +237,7 @@ List* tbr_urls(VALUE text) {
     memcpy(ptr, RSTRING_PTR(text), RSTRING_LEN(text));
 
     while ((token = strstr(ptr, "http://t.co/"))) {
-        size = ptr + 20 > end ? end - ptr : 20;
+        size = 12 + tco_slug_size(token + 12, 10);
 
         if (!(lnode = list_push(lroot, lcurr, token, size))) {
             free(buffer);
