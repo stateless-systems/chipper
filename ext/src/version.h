@@ -1,1 +1,1 @@
-#define CHIPPER_VERSION "0.4.1"
+#define CHIPPER_VERSION "0.4.2"

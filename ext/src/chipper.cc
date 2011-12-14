@@ -227,17 +227,34 @@ List* tbr_urls(VALUE text) {
     int size;
     List *lroot = 0, *lcurr = 0, *lnode;
 
-    char *token, *ptr, *end, *buffer = (char*)calloc(RSTRING_LEN(text) + 1, 1);
+    char *token, *ptr, *buffer = (char*)calloc(RSTRING_LEN(text) + 1, 1);
     if (!buffer)
         rb_raise(rb_eNoMemError, "ran out of memory copying tweet text");
 
     ptr = buffer;
-    end = buffer + RSTRING_LEN(text);
     bzero(ptr, RSTRING_LEN(text) + 1);
     memcpy(ptr, RSTRING_PTR(text), RSTRING_LEN(text));
 
+    // TODO: remove duplication
     while ((token = strstr(ptr, "http://t.co/"))) {
         size = 12 + tco_slug_size(token + 12, 10);
+
+        if (!(lnode = list_push(lroot, lcurr, token, size))) {
+            free(buffer);
+            rb_raise(rb_eNoMemError, "ran out of memory while storing result");
+        }
+
+        if (lcurr)
+            lcurr = lnode;
+        else
+            lroot = lcurr = lnode;
+
+        ptr = token + size;
+    }
+
+    ptr = buffer;
+    while ((token = strstr(ptr, "https://t.co/"))) {
+        size = 13 + tco_slug_size(token + 13, 10);
 
         if (!(lnode = list_push(lroot, lcurr, token, size))) {
             free(buffer);

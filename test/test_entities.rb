@@ -51,7 +51,7 @@ describe 'Chipper entities' do
   end
 
   it 'should work around shitty urls' do
-    crap = "foo bar http://t.co/KCZSuVx½"
-    Chipper.urls(crap).must_equal ['http://t.co/KCZSuVx']
+    crap = "foo bar https://t.co/KCZSuVx½"
+    Chipper.urls(crap).must_equal ['https://t.co/KCZSuVx']
   end
 end
