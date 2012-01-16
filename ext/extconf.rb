@@ -45,17 +45,14 @@ def library_installed? name, hint
   end
 end
 
-srcprefix = '{re2,src}'
+# ugly mkmf hack: manually assign source and object directories.
+$srcs = Dir["{re2/*.cc,src/*.cc}"]
+$objs = $srcs.map {|name| File.join(File.dirname(name), File.basename(name, ".cc") + ".o")}
 
-create_makefile 'chipper', srcprefix
+class File
+  def self.basename name
+    name
+  end
+end
 
-# NOTE mkmk.rb is shit, it does not allow for multiple source dirs - hence the following hack.
-currdir  = File.dirname(__FILE__)
-filename = File.join(currdir, 'Makefile')
-makefile = File.read(filename)
-sources  = Dir["#{srcprefix}/*.cc"]
-
-makefile.gsub! %r{srcdir = [^\r\n]+}mi, "srcdir = #{srcprefix.gsub(/[{}]/, '').gsub(/[\s,]+/, ':')}"
-makefile.gsub! %r{SRCS = [^\r\n]+}m,    "SRCS = #{sources.join(' ')}"
-
-File.open(filename, 'w') {|fh| fh.write(makefile) }
+create_makefile 'chipper'

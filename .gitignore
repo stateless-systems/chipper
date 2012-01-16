@@ -2,6 +2,8 @@ test?.rb
 ext/*
 !ext/src
 !ext/re2
+ext/re2/*.o
+ext/src/*.o
 !ext/util
 !ext/*.rb
 pkg/*
