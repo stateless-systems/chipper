@@ -1,6 +1,7 @@
-= Twitter Text Extraction Utilities
+= Twitter Text Extraction
 
-fast screen name, hashtag, url extraction and tokenizer for tweets.
+A fast screen name, hashtag, url extraction and tokenizer for tweets.
+
 
 == API
 
@@ -28,6 +29,8 @@ fast screen name, hashtag, url extraction and tokenizer for tweets.
     Chipper.users(tweet)    #=> ["@apple"]
     Chipper.hashtags(tweet) #=> ["#watch"]
     Chipper.urls(tweet)     #=> ["http://t.co/HM7XoimM"]
+
+    # n-gram tokenizer, returns a list of tokens partitioned by stop words, punctuation, urls and hashtags.
     Chipper.tokens(tweet)   #=> [["could"], ["get"], ["videos"], ["can"]]
 
     # single method that does all of the above and returns a hash.
