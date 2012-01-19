@@ -55,15 +55,21 @@ void replace(char *string, const char *pattern, int c) {
     }
 }
 
+// TODO: inplace version that doesn't barf on pointer math.
 void remove(char *string, const char *pattern) {
-    int size = strlen(string), width = strlen(pattern);
-    char *ptr1, *ptr2 = string;
+    int width = strlen(pattern);
+    char *sanitized = (char *)malloc(strlen(string) + 1), *src = string, *dst = sanitized;
 
-    while ((ptr1 = strstr(ptr2, pattern))) {
-        memcpy(ptr1, ptr1 + width, size - (ptr1 - string) - width);
-        size        -= width;
-        string[size] = 0;
+    while (*src) {
+        if (memcmp(src, pattern, width) == 0)
+            src += width;
+        else
+            *dst++ = *src++;
     }
+
+    *dst = 0;
+    strcpy(string, sanitized);
+    free(sanitized);
 }
 
 typedef struct List {
